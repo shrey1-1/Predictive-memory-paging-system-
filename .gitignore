@@ -1,0 +1,26 @@
+# data — traces are large and reproducible; never commit them
+data/*
+!data/.gitkeep
+ChampSim/
+*.txt.xz
+*.trace.gz
+
+# generated results (reference results are kept)
+results/*.csv
+results/*.json
+results/*.png
+!results/.gitkeep
+!results/reference/
+
+# python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+venv/
+.env
+
+# os / editors
+.DS_Store
+.vscode/
+.idea/
