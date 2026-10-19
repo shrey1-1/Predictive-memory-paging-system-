@@ -42,3 +42,14 @@ ABLATION_CONFIGS = [
 def ensure_dirs():
     for d in (DATA_DIR, RAW_DIR, TRACE_DIR, RESULTS_DIR):
         os.makedirs(d, exist_ok=True)
+
+# FROZEN controller for the final system (Phase 16), chosen by scripts/15_tune_controller.py on the
+# 25% WARM-UP PORTION ONLY of 13 real traces + clustered (RAM = 1% of working set). Rule fixed before the run:
+# keep settings whose worst case is within 0.002 of the default's, take the highest mean, keep the default
+# unless beaten by > 0.002. Result: mean vs_LRU +0.6647 (default +0.6613), worst -0.0382 (default -0.0800).
+# Shorter epochs and bigger steps react faster. The class defaults (epoch 2000, step 0.05) are unchanged so
+# that every earlier result still reproduces.
+# budget_ratio (Phase 17 follow-up, scripts/16_tune_budget.py, warm-up only, same rule): the 35% cap from Stage 5
+# blocked the system on omnetpp/cc-5 while it was winning every epoch. No cap (1.01) was best and never worse
+# on any warm-up trace (mean +0.5897 vs +0.5658 at 0.35); 0.75 is within noise (+0.5895).
+CONTROLLER_FROZEN = dict(epoch=1000, step=0.1, dead_band=0.002, budget_ratio=1.01)

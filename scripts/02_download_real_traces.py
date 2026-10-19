@@ -8,7 +8,7 @@ Usage:
     python scripts/02_download_real_traces.py --links ChampSim/download_links --pick 410.bwaves-s0 bfs-3
 """
 import _path  # noqa: F401
-import argparse, lzma, os, subprocess
+import argparse, lzma, os, urllib.request
 from paging import config
 from paging.traces import parse_download_links, convert
 
@@ -35,7 +35,7 @@ for name in args.pick:
     raw = os.path.join(config.RAW_DIR, f'{name}.txt.xz')
     if not os.path.exists(raw):
         print(f'downloading {name} ...')
-        subprocess.run(['wget', '-q', '-O', raw, urls[name]], check=True)
+        urllib.request.urlretrieve(urls[name], raw)     # pure Python: works on Windows (no wget)
 
     try:
         with lzma.open(raw, 'rt') as f:

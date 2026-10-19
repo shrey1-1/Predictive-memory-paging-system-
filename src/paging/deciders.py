@@ -111,7 +111,12 @@ class CostAwareFaultDelta:
     name = 'cost-aware-fd'
 
     def __init__(self, base_thr=0.5, lo=0.15, hi=0.95, epoch=2000, step=0.05,
-                 budget_ratio=0.35, dead_band=0.002):
+                 budget_ratio=0.35, dead_band=0.002, allow_off=False):
+        # allow_off (Phase 14): when still losing at the ceiling, stop prefetching entirely and
+        # re-test after 1, 2, 4, ... epochs (exponential backoff). Needed because confidence 1.0
+        # (a context seen once) always passes the 0.95 ceiling. False = original behaviour.
+        self.allow_off = allow_off
+        self.off_left, self.backoff, self.n_off_epochs = 0, 1, 0
         self.thr = base_thr
         self.lo, self.hi = lo, hi
         self.epoch = epoch
@@ -122,6 +127,9 @@ class CostAwareFaultDelta:
         self.d_budget = self.d_cost = self.d_thr = self.n_yes = 0
 
     def decide(self, page, conf, state):
+        if self.off_left > 0:
+            self.d_thr += 1
+            return False
         if state['n_prefetch'] > self.budget_ratio * max(1, state['n_access']):
             self.d_budget += 1
             return False
@@ -136,14 +144,26 @@ class CostAwareFaultDelta:
         self.n_yes += 1
         return True
 
-    def epoch_update(self, real_faults, shadow_faults, n_access):
-        delta_rate = (shadow_faults - real_faults) / max(1, self.epoch)
+    def _adapt(self, delta_rate):
+        """Shared threshold controller for every fault-delta variant."""
         self.delta_history.append(round(delta_rate, 5))
+        if self.off_left > 0:                       # prefetching is off: wait, then probe at the ceiling
+            self.off_left -= 1
+            self.n_off_epochs += 1
+            self.thr_history.append(round(self.thr, 3))
+            return
         if delta_rate > self.dead_band:
             self.thr = max(self.lo, self.thr - self.step)
+            self.backoff = 1
         elif delta_rate < -self.dead_band:
+            if self.allow_off and self.thr >= self.hi:
+                self.off_left = self.backoff
+                self.backoff *= 2
             self.thr = min(self.hi, self.thr + self.step)
         self.thr_history.append(round(self.thr, 3))
+
+    def epoch_update(self, real_faults, shadow_faults, n_access):
+        self._adapt((shadow_faults - real_faults) / max(1, self.epoch))
 
     def feedback(self, page, used):
         pass    # precision deliberately ignored
@@ -157,8 +177,25 @@ class CostAwareFaultDelta:
                 'mean_delta_rate': round(float(np.mean(dh)), 5) if dh else None,
                 'epochs_winning': sum(1 for d in dh if d > 0),
                 'epochs_losing': sum(1 for d in dh if d < 0),
-                'approved': self.n_yes,
+                'approved': self.n_yes, 'off_epochs': self.n_off_epochs,
                 'd_budget': self.d_budget, 'd_cost': self.d_cost, 'd_thr': self.d_thr}
+
+
+class CostAwareGhost(CostAwareFaultDelta):
+    """
+    Deployable fault-delta adaptation: no shadow engine.
+    Estimated delta per epoch = prefetches used - refaults of pages evicted by prefetches.
+    """
+    name = 'cost-aware-ghost'
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.prev_used = self.prev_harm = 0
+
+    def estimate_update(self, used, harm):
+        d_used, d_harm = used - self.prev_used, harm - self.prev_harm
+        self.prev_used, self.prev_harm = used, harm
+        self._adapt((d_used - d_harm) / max(1, self.epoch))
 
 
 DECIDERS = [
@@ -170,3 +207,21 @@ DECIDERS = [
     lambda: CostAware(),
     lambda: CostAwareFaultDelta(),
 ]
+
+
+class CostAwareDirectory(CostAwareFaultDelta):
+    """
+    Phase 14. Fault-delta feedback from a SHADOW DIRECTORY: a no-prefetch copy of the eviction
+    policy that stores page IDs only (no page data; 8 B per tracked frame). Optionally sampled by
+    page-number hash (SHARDS, Waldspurger et al., FAST 2015): track a fraction `sample` of pages in
+    a directory of sample x n_frames entries and scale the measured delta by 1/sample.
+    Per-epoch (like CostAwareGhost), unlike the running-total oracle. Use run_prefetch_sim_dir.
+    """
+    name = 'cost-aware-dir'
+
+    def __init__(self, sample=1.0, **kw):
+        super().__init__(**kw)
+        self.sample = sample
+
+    def directory_update(self, est_delta):
+        self._adapt(est_delta / max(1, self.epoch))

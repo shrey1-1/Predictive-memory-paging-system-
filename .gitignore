@@ -24,3 +24,11 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+
+# tests
+.pytest_cache/
+
+# generated figures and local-only documents
+results/figures/
+docs/Predictive_Paging_Explained.pdf
+docs/Predictive_Paging_Explained_full.pdf
