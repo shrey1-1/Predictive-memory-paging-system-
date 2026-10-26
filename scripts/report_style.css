@@ -1,7 +1,7 @@
 /* Report style for scripts/13_report.py. One reading column; monochrome greys + one amber accent (project rule: no blue). System fonts only, so the file works offline. */
 :root {
   --bg: #f5f4f1; --surface: #ffffff; --fg: #1f1d1a; --muted: #67625a; --rule: #d9d5cd; --grid: #ebe8e2; --band: #f3f1ed;
-  --accent: #b5680a; --s-dark: #3b3834; --s-mid: #9a958c; --bad: #9b3b1e;
+  --accent: #6caccc; --s-dark: #3b3834; --s-mid: #9a958c; --bad: #db2525;
   --display: "Segoe UI Variable Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --body: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   --mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;

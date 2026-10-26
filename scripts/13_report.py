@@ -11,6 +11,7 @@ import datetime
 import html
 import json
 import os
+import sys
 
 import numpy as np
 import pandas as pd
@@ -472,34 +473,6 @@ if cps is not None and cds is not None:
         'the final directory engine keeps the benefit and limits the harm. Fed the original Markov predictor, all engines give about the same result, because that predictor rarely has anything worth prefetching.</p>',
         body, '<code>component_predictors_summary.csv</code>, <code>component_deciders_summary.csv</code>, script 17')
 
-# ---------------------------------------------------------------- 10. tried
-tried = [('kept', 'Kept', 'Readahead + Markov combination', 'Readahead covers new pages in a run, Markov covers repeats; better than either alone in most configurations.'),
-         ('kept', 'Kept', 'Delta-Markov tier', 'Learns page gaps, so it predicts unseen pages. Markov alone on bwaves: 1,969 → 810 faults.'),
-         ('kept', 'Kept, partial', 'Gating readahead by stream length', 'Halves the worst case and fixes most of clustered@6; costs about half the mcf gain; no effect on clustered@9, where the ghost estimate says "winning" (+988) while the true delta is −1,250.'),
-         ('', 'Rejected', 'Evicting unused prefetches early', 'Never better than LRU on the warm-up data; a longer grace period is much worse.'),
-         ('', 'Rejected', 'Protecting the predicted page from eviction', 'No change: predicted pages are already resident and recent, so LRU keeps them anyway.'),
-         ('', 'Rejected', 'Longer minimum stream length', 'Fixes clustered only by losing the graph and leslie3d gains.'),
-         ('', 'Rejected', 'Smoothed confidence', 'Slightly worse on the warm-up data.'),
-         ('', 'Rejected', 'Different ghost refault window (250-2,000)', 'No effect on faults.'),
-         ('kept', 'Kept', 'Shadow directory feedback (Phase 14)', 'Exact fault delta from a page-ID-only copy of the policy; clustered@9 from -21.5% to -2.5% vs LRU; samplable to 1/8 with the same decisions on 9 of 10 traces.'),
-         ('kept', 'Kept', 'Faster controller (Phase 16)', 'Epoch 1,000 and step 0.1, chosen on warm-up data only; halves the warm-up worst case; identical elsewhere.'),
-         ('kept', 'Kept', 'No prefetch budget cap (Phase 17)', 'The 35% cap from Stage 5 blocked omnetpp while it was winning every epoch; removing it hurt no warm-up trace.'),
-         ('', 'Not adopted', 'Top-2 prefetching', 'Big win on leslie3d, but worse on bfs-3 and bwaves.'),
-         ('', 'Rejected', 'Off switch with exponential backoff (Phase 14)', 'Never triggered on any program.')]
-add('tried', 'Design decisions', 'Six ideas kept, seven rejected or not adopted',
-    '<p>Each idea was measured on the warm-up portion (first 25% of each trace) before any full-trace run. Negative results are kept because they explain where the gains come from.</p>',
-    '<ul class="list">' + ''.join(f'<li><span class="tag {c}">{esc(t)}</span><div><h3>{esc(h)}</h3><p>{esc(d)}</p></div></li>' for c, t, h, d in tried) + '</ul>',
-    '<code>docs/RESULTS.md</code> sections 9-12')
-
-add('limits', 'Limitations', 'What these numbers do not show', '',
-    '<ul class="list">' + ''.join(f'<li><span class="tag">{esc(a)}</span><p>{esc(b)}</p></li>' for a, b in [
-        ('Metric', 'Mostly page-fault counts. The time estimates (Phase 15) use stated typical latencies and a swept compute time per access; they are a model, not measurements on real hardware.'),
-        ('Traces', 'Last-level-cache traces at 4 KB page granularity approximate OS paging; they are not OS paging traces.'),
-        ('Runs', 'One run per configuration (the traces are deterministic), 200,000 accesses each, small simulated memories (8 to 1,163 frames).'),
-        ('Baselines', 'ARC drops the textbook tie-break; LRU-2 has no correlated-reference period; the readahead window is a quarter of RAM.'),
-        ('Tuning', 'Controller and ghost-list parameters are still the untuned defaults; the graph traces\' warm-up portion is a sequential initialisation and could not inform any choice.'),
-    ]) + '</ul>', '<code>docs/RESULTS.md</code>, <code>docs/DECISIONS_AND_LESSONS.md</code>')
-
 # ---------------------------------------------------------------- headline + page
 tiles = ''
 if summary:
@@ -533,5 +506,8 @@ addEventListener('beforeprint', () => document.querySelectorAll('details').forEa
 with open(OUT, 'w', encoding='utf-8') as f:
     f.write(page)
 print(f'report written to {OUT} ({len(page) / 1024:.0f} KB, {len(toc)} sections)')
+if '--open' in sys.argv:                      # python scripts/13_report.py --open  -> show it in the browser
+    import webbrowser
+    webbrowser.open('file:///' + os.path.abspath(OUT).replace(os.sep, '/'))
 if skipped:
     print('skipped (missing CSV):', ', '.join(skipped))
