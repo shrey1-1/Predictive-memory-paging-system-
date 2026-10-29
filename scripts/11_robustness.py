@@ -25,6 +25,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--ratios', nargs='*', type=float, default=[0.01, 0.05])
 args = ap.parse_args()
 config.ensure_dirs()
+
+
 out = os.path.join(config.RESULTS_DIR, 'robustness.csv')
 done = pd.read_csv(out) if os.path.exists(out) else pd.DataFrame()
 rows = done.to_dict('records')

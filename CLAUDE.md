@@ -28,7 +28,10 @@ pytest -q                                   # ~13 s. Must pass before AND after 
 python scripts/run_all.py                   # whole pipeline, synthetic traces only (a few minutes)
 python scripts/09_phase8_baselines.py       # Phase 8 (ARC, LRU-2, readahead). Resumable.
 python scripts/02_download_real_traces.py --links ChampSim/download_links   # needs wget (see Pitfalls)
+python scripts/build_notebook.py            # regenerate the Colab notebook after any change in src/paging
 ```
+The Colab notebook (`notebooks/predictive_paging_full_pipeline.ipynb`) is generated from `src/paging`; never edit it by hand
+(`tests/test_notebook.py` checks it is up to date).
 Scripts skip any configuration whose trace is missing, so everything runs on synthetic traces alone.
 Paths: `PAGING_DATA_DIR`, `PAGING_RESULTS_DIR` env vars override `data/` and `results/` (used on Colab/Drive).
 

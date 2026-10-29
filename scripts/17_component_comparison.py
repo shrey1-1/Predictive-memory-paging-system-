@@ -130,5 +130,5 @@ for pl in DECIDER_PREDICTORS:
     print(f'\nDECIDERS fed by: {pl}')
     print(summarise(D[D.predictions == pl], 'decider').round(3).to_string())
 sp.to_csv(os.path.join(config.RESULTS_DIR, 'component_predictors_summary.csv'))
-pd.concat({pl: summarise(D[D.predictions == pl], 'decider') for pl in DECIDER_PREDICTORS}).to_csv(
+pd.concat({pl: summarise(D[D.predictions == pl], 'decider') for pl in DECIDER_PREDICTORS}, names=['predictions']).to_csv(
     os.path.join(config.RESULTS_DIR, 'component_deciders_summary.csv'))

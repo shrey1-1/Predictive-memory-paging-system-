@@ -147,14 +147,14 @@ Deployable fault-delta feedback, no shadow engine, vs the oracle:
 | ghost estimate | **0.0902** | -0.0072 | 0.3729 |
 | oracle (shadow) | 0.0898 | -0.0072 | 0.3729 |
 
-Identical on four of eight configurations; on clustered@9 the ghost version is better (+0.0009 vs -0.0048). Sanity check vs cell 17: MATCH.
+Identical on four of eight configurations in the Colab run (the local rerun of script 07, `results/ghost_estimate_results.csv`, gives identical fault counts on three: leslie3d@21, bwaves@30, clustered@6; the means above are unchanged); on clustered@9 the ghost version is better (+0.0009 vs -0.0048). Sanity check vs cell 17: MATCH.
 **Per-epoch correlation, estimated vs true delta** (the honest caveat): bwaves@30 0.999, clustered@9 0.689, leslie3d@21 0.662, bfs-3@58 0.596, bfs-3@20 0.516,
 clustered@6 0.238, **pr-3@15 -0.975, pr-3@40 -0.976**; pooled 0.427.
 Reading: accurate where the effect is large, noisy where it is tiny, never the wrong decision. The pr-3 anti-correlation is probably the refault window (2,000) blaming prefetches for evictions LRU would have made anyway. Untested hypothesis: try 250/500/1,000.
 
 ## 6. Phase 8 baselines [synthetic and sandbox only, NOT real traces]
 
-Reproduce with `python scripts/09_phase8_baselines.py`. **No real-trace result exists yet.**
+Reproduce with `python scripts/09_phase8_baselines.py`. *(Superseded: the real-trace results are in section 9.)*
 
 - **Scan test** (12 reused pages + one-time scan, 16 frames) [synthetic]: FIFO 15,261, Clock 14,892, LRU 14,520, **LRU-2 9,984, ARC 9,986**, OPT 9,980.
 - **Readahead** [synthetic], 64 frames: sequential LRU 50,000 -> 11 faults; strided unchanged (50,000); random unchanged (49,671 -> 49,670). `cyclic`@8: 50,000 -> 5,001.
@@ -167,7 +167,8 @@ Reproduce with `python scripts/09_phase8_baselines.py`. **No real-trace result e
 ## 7. Phase 6 smoke test [sandbox]
 
 `phase_changing` (synthetic): ghost decider +17.6% vs always-prefetch +50.3%, so the ghost/controller is too cautious on a workload with long predictable stretches (target of Phase 11 tuning).
-The Phase 6 harness (`scripts/08_evaluation_harness.py`: segments -s0/-s1/-s2, memory sweep, 5 seeds, figures) has **not** been run on real traces.
+The Phase 6 harness (`scripts/08_evaluation_harness.py`: segments -s0/-s1/-s2, memory sweep, 5 seeds, figures) has since been run locally on the real traces
+(`results/phase6_*.csv`, Markov+ghost system: bwaves segments +0.25 ± 0.20, leslie3d +0.29 ± 0.06), but segments and memory sizes for the *final* system are covered by section 16 instead.
 
 ## 8. The headline claims, and what supports them
 
@@ -179,7 +180,7 @@ The Phase 6 harness (`scripts/08_evaluation_harness.py`: segments -s0/-s1/-s2, m
 6. A ghost list reproduces it without a shadow engine [real; correlation caveat above].
 7. Prefetching can beat OPT by avoiding compulsory faults [real, bwaves].
 
-**Not yet supported**: robustness across trace segments, behaviour across memory sizes, anything about ARC/LRU-2/readahead on real traces, any execution-time claim (we count faults, not time).
+**Not yet supported** *(as of this section; sections 9-17 later covered segments, two memory sizes, ARC/LRU-2/readahead on real traces and an estimated-time model)*: robustness across trace segments, behaviour across memory sizes, anything about ARC/LRU-2/readahead on real traces, any execution-time claim (we count faults, not time).
 
 ## 9. Phase 8 on the real traces, and the improvement experiments [real traces, run locally 2026-10-19]
 
@@ -284,6 +285,8 @@ Per-epoch correlation with the true delta falls with sampling (e.g. libquantum 1
 
 ## 14. Phase 15: time model (script 14, `results/time_model.csv`) [real traces, model estimates, NOT measurements]
 
+*(13-trace run. `results/time_model.csv` has since been regenerated with 22 traces, so the table below can no longer be recomputed from it; the 22-trace numbers are in section 16.)*
+
 I/O timeline replay (`src/paging/timing.py`): compute `t_cpu` per traced access (unknown for LLC traces, swept 0.1 / 1 / 10 us), prediction cost 0.2 us per access (or 0),
 4 KB read 80 us on an NVMe SSD with 8 parallel channels, 5 ms on an HDD with 1 channel; demand faults block and can queue behind prefetch reads (no demand priority: pessimistic for prefetching);
 a prefetched page used before its read completes stalls for the rest (late prefetch). 13 real traces, RAM = 1% of working set, LRU underneath. Speedup = time(LRU) / time(system).
@@ -317,7 +320,8 @@ No cap was best and never worse on any warm-up trace (mean +0.5897 vs +0.5658); 
 
 **Faults, 44 points, `vs_LRU`:** final system mean **+0.550**, median +0.593, worst -0.033 (bwaves-s2@1%), worse than LRU in 1/44; readahead +0.507 (worst -0.193); original Markov +0.077.
 Final vs readahead: fewer faults in 34/44, equal 8, more 2 (sphinx3@1%: 11,263 vs 8,997, a 16.9%-of-LRU loss because the decider holds back useful streams after 41 losing epochs; bwaves-s0@1%: 1 fault). Below OPT in 30/44.
-New traces: omnetpp +0.97 (readahead +0.97), GemsFDTD +0.74/+0.84, sssp +0.58, bc +0.41/+0.44, soplex +0.21/+0.34, cc +0.14, astar +0.07, lbm 0 (nothing is predictable; LRU ~= OPT).
+New traces (1% / 5%): omnetpp +0.97 (readahead +0.97), GemsFDTD +0.74/+0.84, sssp +0.61/+0.62, bc +0.41/+0.44, soplex +0.21/+0.34, cc +0.18/+0.28, astar +0.07/+0.06, lbm 0 (nothing is predictable; LRU ~= OPT).
+(Corrected 2026-10-27: sssp +0.58 and cc +0.14 were the `Comb_d_dir` column, i.e. the system before the budget cap was removed, not `Final`. The paper and report already used the `Final` values.)
 
 **Time (script 14, 22 traces, prediction cost 0.2 us; geometric mean speedup vs LRU):**
 
@@ -329,7 +333,7 @@ New traces: omnetpp +0.97 (readahead +0.97), GemsFDTD +0.74/+0.84, sssp +0.58, b
 
 **The honest headline:** the final system has the most fault reduction of every system, but in *estimated time* it ties Linux-style readahead (1.43x vs 1.44x on NVMe). It is faster on leslie3d (1.24x vs 1.14x) and slower on sphinx3 (0.93x vs 1.26x) and cc-5;
 the extra faults it removes cost extra prefetch reads. On a single-channel HDD every prefetcher is slower than LRU, the final system most. lbm is 0.92x for everyone (prediction cost, nothing to gain).
-Break-even prefetch cost (script 12, 22 traces): final system c* 0.00-0.95, below readahead's on most graph traces, above it on leslie3d (0.42 vs 0.30) and mcf (0.47 vs 0.37).
+Break-even prefetch cost (script 12, 22 traces): final system c* -0.04 (bwaves-s2, the one trace where it loses to LRU) to 0.95, below readahead's on most graph traces, above it on leslie3d (0.42 vs 0.30) and mcf (0.47 vs 0.37).
 
 ## 17. Component comparison (script 17, `results/component_*`) [22 real traces at 1% + synthetic clustered, LRU underneath]
 
@@ -351,5 +355,6 @@ In time the combination is not faster than readahead alone on the SSD model (1.4
 **Deciders, fed the final predictor** (mean over real traces / worst real trace / clustered@9-equivalent at 1% / SSD speed-up):
 always and fixed-0.3 +51.2% / -6.3% / **-21.5%** / 1.49x; fixed-0.6 +28.8% / 0.0% / -5.5% / 1.21x; fixed-0.85 +19.8% / 0.0% / -0.2% / 1.07x; precision +26.8% / 0.0% / -5.2% / 1.16x;
 fault-delta oracle +49.1% / **0.0%** / -1.7% / 1.39x; ghost +47.9% / -3.2% / -21.5% / 1.39x; directory (default controller) +49.0% / -1.4% / -2.5% / 1.39x; **directory + frozen controller (final) +51.2% / -3.3% / -2.4% / 1.49x**.
-Reading: the final decider keeps all of `always`'s benefit while cutting its clustered harm from -21.5% to -2.4%; fixed thresholds are safe but lose half or more of the benefit; the (non-deployable) oracle is the only one never worse than LRU.
+Reading: the final decider keeps all of `always`'s benefit while cutting its clustered harm from -21.5% to -2.4%; fixed thresholds (0.6, 0.85) and precision are never worse than LRU on a real trace but lose half or more of the benefit; the (non-deployable) oracle is the only decider that is never worse than LRU on a real trace *and* keeps most of the benefit (+49.1%).
+(Corrected 2026-10-27: this line used to say the oracle was the only decider never worse than LRU; `component_deciders_summary.csv` shows fixed-0.6, fixed-0.85 and precision also have 0 losses.)
 Fed the original Markov hybrid, all deciders give +8.3% to +9.4%: that predictor rarely has anything worth prefetching, so the decision layer barely matters.

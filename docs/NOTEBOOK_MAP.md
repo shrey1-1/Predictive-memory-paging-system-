@@ -1,5 +1,27 @@
 # Notebook to repo map
 
+## The current notebook (2026-10-27)
+
+`notebooks/predictive_paging_full_pipeline.ipynb` is one self-contained Colab notebook in the style of the original
+(every class defined in a numbered `#cell N` cell, tables and plots after each step, everything saved to
+`MyDrive/paging_sim/`). It needs no zip and no clone: only Drive. Cells 0a-0e are traces, cells 1-19 keep the original
+numbering (so "cell 17/18/19" in the documents still means the same thing), cells 20-31 are Phases 8-18
+(ARC/LRU-2/readahead, delta-Markov, shadow directory, final system, 22 traces, break-even, time model, tuning,
+component comparison, results at a glance, consistency check).
+
+It is **generated**: `python scripts/build_notebook.py` copies the class code from `src/paging` with `inspect`, so the
+notebook runs exactly the tested code. `tests/test_notebook.py` fails if `src/paging` changed and the notebook was not rebuilt.
+Do not edit the notebook by hand; edit `scripts/build_notebook.py` (or `scripts/consistency_cell.py` for cell 31) and rebuild.
+
+**The user's original notebook, extended (2026-10-27).** `os-predictive-memory-paging-system.ipynb` (kept outside the repo,
+in the user's Downloads / Drive) has its original cells 1-19 unchanged, plus cells 20-34 appended by
+`python scripts/extend_original_notebook.py <original.ipynb> <output.ipynb>`: setup, final core classes (with a check that
+cell 17 is reproduced), 22 traces, Phases 8-18, comparison graphs (cell 33, code in `scripts/comparison_graphs_cell.py`,
+figures also in `results/figures/comparison/`) and the consistency check (cell 34). Verified locally: every number the
+appended cells produce is identical to `results/` (4-trace subset), and all 18 consistency checks pass on the full results.
+
+The rest of this file describes the *original* notebook.
+
 The work started in a Google Colab notebook (cells numbered `#cell N`). The repo is the maintained version. Use this when a number in an old
 document says "cell 17" or when you need the original plotting code.
 

@@ -32,3 +32,10 @@ venv/
 results/figures/
 docs/Predictive_Paging_Explained.pdf
 docs/Predictive_Paging_Explained_full.pdf
+
+# Colab code bundle (regenerate with git archive)
+notebooks/*.zip
+
+# Downloaded papers (copyright of their publishers; keep local, see docs/references/README.md)
+docs/references/*.pdf
+results/notebook/
