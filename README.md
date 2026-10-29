@@ -2,9 +2,8 @@
 
 A trace-driven simulator for **workload-aware, cost-aware predictive paging**. It predicts future page accesses with a lightweight Markov chain, and uses a decision engine to choose which predictions are worth prefetching. The system is evaluated against FIFO, LRU, Clock and Belady's OPT on synthetic and real benchmark traces.
 
-**Team:** G.K Shreyas Bharadwaj (24BCE2256) · Vaastav Bajanthri (24BCE2223) · P. Giphy Bershan (24BCE2201)
 
----
+
 
 ## Key results
 
